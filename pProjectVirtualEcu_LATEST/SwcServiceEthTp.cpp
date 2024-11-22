@@ -11,12 +11,14 @@
 
 #include "infClientSwcServiceEthTp.hpp"
 
-#include <iostream>
+#include <iostream> // TBD: optimize
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <cstring>
+
+#include "infClientCfgMcalEth.hpp"
 
 /******************************************************************************/
 /* #DEFINES                                                                   */
@@ -38,124 +40,104 @@
 /* PARAMS                                                                     */
 /******************************************************************************/
 typedef struct{
-   uint32 u32Domain;
-   uint32 u32SocketType;
-   uint32 u32Protocol;
-}Type_CfgMcalEth_stSocket;
+   sint32 s32FileDescriptorSocket;
+   sint32 s32Socket;
+}Type_McalEth_stChannel;
 
-typedef struct{
-   uint32    u32Level;
-   uint32    u32OptionName;
-   uint32    u32Option;
-   socklen_t tSizeOption;
-}Type_CfgMcalEth_stOption;
+class Type_SwcServiceEthTp:
+      public infClientSwcServiceEthTp
+{
+   private:
+      Type_McalEth_stChannel stChannel;
+      Type_CfgMcalEth*       pstCfg;
 
-typedef struct{
-   Type_CfgMcalEth_stSocket stSocket;
-   Type_CfgMcalEth_stOption stOption;
-   socklen_t                tSizeAddress;
-   struct sockaddr_in       stAddress;
-}Type_CfgMcalEth;
-
-volatile const Type_CfgMcalEth CfgMcalEth = {
-      {
-            AF_INET
-         ,  SOCK_STREAM
-         ,  0
-      }
-   ,  {
-            SOL_SOCKET
-         ,  (SO_REUSEADDR | SO_REUSEPORT)
-         ,  1
-         ,  sizeof(uint32)
-      }
-   ,  sizeof(struct sockaddr_in)
-   ,  {
-            AF_INET
-         ,  htons(8080) // Port number
-         ,  {INADDR_ANY}
-      }
+   public:
+      void vInitFunction   (void);
+      void vRead           (      sint8* ps8Buffer,  uint32 u32LengthBuffer);
+      void vWrite          (const sint8* pcs8Buffer, uint32 u32LengthBuffer);
+      void vMainFunction   (void);
+      void vDeInitFunction (void);
 };
 
 /******************************************************************************/
 /* OBJECTS                                                                    */
 /******************************************************************************/
-Type_SwcServiceEthTp SwcServiceEthTp;
+Type_SwcServiceEthTp            SwcServiceEthTp;
+infClientSwcServiceEthTp* const cpstinfClientSwcServiceEthTp = &SwcServiceEthTp;
 
 /******************************************************************************/
 /* FUNCTIONS                                                                  */
 /******************************************************************************/
 void Type_SwcServiceEthTp::vInitFunction(void){
+   this->pstCfg = CfgMcalEth_pstGet();
    if(
          0
       == (
-            this->stChannel.u32FileDescriptorSocket = socket(
-                  CfgMcalEth.stSocket.u32Domain
-               ,  CfgMcalEth.stSocket.u32SocketType
-               ,  CfgMcalEth.stSocket.u32Protocol
+            this->stChannel.s32FileDescriptorSocket = socket(
+                  this->pstCfg->stSocket.u32Domain
+               ,  this->pstCfg->stSocket.u32SocketType
+               ,  this->pstCfg->stSocket.u32Protocol
             )
          )
    ){
-      std::cerr << "socket creation failed" << std::endl;
+      std::cerr << std::endl << "ERROR: socket creation failed" << std::endl;
       exit(EXIT_FAILURE);
    }
 
    if(
       setsockopt(
-            this->stChannel.u32FileDescriptorSocket
-         ,                 CfgMcalEth.stOption.u32Level
-         ,                 CfgMcalEth.stOption.u32OptionName
-         ,  (const void*) &CfgMcalEth.stOption.u32Option
-         ,                 CfgMcalEth.stOption.tSizeOption
+                           this->stChannel.s32FileDescriptorSocket
+         ,                 this->pstCfg->stOption.u32Level
+         ,                 this->pstCfg->stOption.u32OptionName
+         ,  (const void*) &this->pstCfg->stOption.u32Option
+         ,                 this->pstCfg->stOption.tSizeOption
       )
    ){
-      std::cerr << "setsockopt" << std::endl;
+      std::cerr << std::endl << "ERROR: setsockopt" << std::endl;
       exit(EXIT_FAILURE);
    }
 
    if(
          0
       >  bind(
-               this->stChannel.u32FileDescriptorSocket
-            ,  (struct sockaddr*) &CfgMcalEth.stAddress
-            ,  CfgMcalEth.tSizeAddress
+                                   this->stChannel.s32FileDescriptorSocket
+            ,  (struct sockaddr*) &this->pstCfg->stAddress
+            ,                      this->pstCfg->tSizeAddress
          )
    ){
-      std::cerr << "bind failed" << std::endl;
-      exit(EXIT_FAILURE);
-   }
-    
-   // Start listening for incoming connections
-   if(
-         0
-      >  listen(
-               this->stChannel.u32FileDescriptorSocket
-            ,  3
-         )
-   ){
-      std::cerr << "listen" << std::endl;
+      std::cerr << std::endl << "ERROR: bind failed" << std::endl;
       exit(EXIT_FAILURE);
    }
 
-   // Accept an incoming connection
+   if(
+         0
+      >  listen(
+               this->stChannel.s32FileDescriptorSocket
+            ,  this->pstCfg->u32BacklogListen
+         )
+   ){
+      std::cerr << std::endl << "ERROR: listen" << std::endl;
+      exit(EXIT_FAILURE);
+   }
+
    if(
          0
       >  (
-            this->stChannel.u32Socket = accept(
-                  this->stChannel.u32FileDescriptorSocket
-               ,  (struct sockaddr*) &CfgMcalEth.stAddress
-               ,  (socklen_t*)       &CfgMcalEth.tSizeAddress
+            this->stChannel.s32Socket = accept(
+                                      this->stChannel.s32FileDescriptorSocket
+               ,  (struct sockaddr*) &this->pstCfg->stAddress
+               ,  (socklen_t*)       &this->pstCfg->tSizeAddress
             )
          )
    ){
-      std::cerr << "accept" << std::endl;
+      std::cerr << std::endl << "ERROR: accept" << std::endl;
       exit(EXIT_FAILURE);
    }
 }
 
 void Type_SwcServiceEthTp::vDeInitFunction(void){
-   close(this->stChannel.u32Socket);
-   close(this->stChannel.u32FileDescriptorSocket);
+   close(this->stChannel.s32Socket);
+   close(this->stChannel.s32FileDescriptorSocket);
 }
 
 void Type_SwcServiceEthTp::vRead(
@@ -163,7 +145,7 @@ void Type_SwcServiceEthTp::vRead(
    ,  uint32 u32LengthBuffer
 ){
    read(
-         this->stChannel.u32Socket
+         this->stChannel.s32Socket
       ,  ps8Buffer
       ,  u32LengthBuffer
    );
@@ -174,10 +156,10 @@ void Type_SwcServiceEthTp::vWrite(
    ,        uint32 u32LengthBuffer
 ){
    send(
-         this->stChannel.u32Socket
+         this->stChannel.s32Socket
       ,  pcs8Buffer
       ,  u32LengthBuffer
-      ,  0
+      ,  this->pstCfg->u32FlagsSend
    );
 }
 

@@ -20,21 +20,13 @@
 /******************************************************************************/
 /* TYPEDEFS                                                                   */
 /******************************************************************************/
-typedef struct{
-   uint32 u32FileDescriptorSocket;
-//   uint32 u32Socket;
-}Type_McalEth_stChannel;
-
-class Type_SwcServiceEthTp{
-   private:
-      Type_McalEth_stChannel stChannel;
-
+class infClientSwcServiceEthTp{
    public:
-      void vInitFunction   (void);
-      void vRead           (      sint8* ps8Buffer,  uint32 u32LengthBuffer);
-      void vWrite          (const sint8* pcs8Buffer, uint32 u32LengthBuffer);
-      void vMainFunction   (void);
-      void vDeInitFunction (void);
+      virtual void vInitFunction   (void)                                            = 0;
+      virtual void vRead           (      sint8* ps8Buffer,  uint32 u32LengthBuffer) = 0;
+      virtual void vWrite          (const sint8* pcs8Buffer, uint32 u32LengthBuffer) = 0;
+      virtual void vMainFunction   (void)                                            = 0;
+      virtual void vDeInitFunction (void)                                            = 0;
 };
 
 /******************************************************************************/
@@ -48,7 +40,7 @@ class Type_SwcServiceEthTp{
 /******************************************************************************/
 /* OBJECTS                                                                    */
 /******************************************************************************/
-extern Type_SwcServiceEthTp SwcServiceEthTp;
+extern infClientSwcServiceEthTp* const cpstinfClientSwcServiceEthTp;
 
 /******************************************************************************/
 /* FUNCTIONS                                                                  */
