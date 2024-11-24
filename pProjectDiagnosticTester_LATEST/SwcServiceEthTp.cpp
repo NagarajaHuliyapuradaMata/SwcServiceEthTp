@@ -10,16 +10,16 @@
 #include "TypesStd.hpp"
 
 #include "infClientSwcServiceEthTp.hpp"
+#include "interface_Persistency.hpp"
 
-#include <iostream> // TBD: optimize
+#include <iostream>
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <cstring>
-
-#include "infClientCfgMcalEth.hpp"
 
 /******************************************************************************/
 /* #DEFINES                                                                   */
@@ -32,24 +32,29 @@
 /******************************************************************************/
 /* TYPEDEFS                                                                   */
 /******************************************************************************/
-
-/******************************************************************************/
-/* CONSTS                                                                     */
-/******************************************************************************/
-
-/******************************************************************************/
-/* PARAMS                                                                     */
-/******************************************************************************/
 typedef struct{
-   uint32 u32Socket;
+   uint32                   u32Domain;
+   uint32                   u32SocketType;
+   uint32                   u32Protocol;
+}Type_CfgMcalEth_stSocket;
+
+typedef struct{
+   Type_CfgMcalEth_stSocket stSocket;
+   socklen_t                tSizeAddress;
+   struct sockaddr_in       stAddress;
+   uint32                   u32FlagsSend;
+}Type_CfgMcalEth;
+
+typedef struct{
+   sint32 s32Socket;
 }Type_McalEth_stChannel;
 
 class Type_SwcServiceEthTp:
       public infClientSwcServiceEthTp
 {
    private:
-                     Type_McalEth_stChannel stChannel;
-      volatile const Type_CfgMcalEth*       pvcstCfg;
+      Type_McalEth_stChannel stChannel;
+      Type_CfgMcalEth        stCfg;
 
    public:
       void vInitFunction   (void);
@@ -58,6 +63,14 @@ class Type_SwcServiceEthTp:
       void vMainFunction   (void);
       void vDeInitFunction (void);
 };
+
+/******************************************************************************/
+/* CONSTS                                                                     */
+/******************************************************************************/
+
+/******************************************************************************/
+/* PARAMS                                                                     */
+/******************************************************************************/
 
 /******************************************************************************/
 /* OBJECTS                                                                    */
@@ -69,36 +82,40 @@ infClientSwcServiceEthTp* const cpstinfClientSwcServiceEthTp = &SwcServiceEthTp;
 /* FUNCTIONS                                                                  */
 /******************************************************************************/
 void Type_SwcServiceEthTp::vInitFunction(void){
-   this->pvcstCfg = &CfgMcalEth;
+   pPersistency->vGetCfg(
+         (uint64*)&this->stCfg
+      ,  "/home/nagarajahuliyapuradamata/Workspace_Ubuntu/repo_projects/pProjectDiagnosticTester/main_LATEST/source/SwcServiceEthTp/CfgMcalEth.hex"
+   );
+
    if(
          0
       >  (
-            this->stChannel.u32Socket = socket(
-                  this->pvcstCfg->stSocket.u32Domain
-               ,  this->pvcstCfg->stSocket.u32SocketType
-               ,  this->pvcstCfg->stSocket.u32Protocol
+            this->stChannel.s32Socket = socket(
+                  this->stCfg.stSocket.u32Domain
+               ,  this->stCfg.stSocket.u32SocketType
+               ,  this->stCfg.stSocket.u32Protocol
             )
          )
    ){
-      std::cerr << "socket" << std::endl;
+      std::cerr << std::endl << "ERROR: socket" << std::endl;
       exit(EXIT_FAILURE);
    }
 
    if(
          0
       >  connect(
-                                   this->stChannel.u32Socket
-            ,  (struct sockaddr*) &this->pvcstCfg->stAddress
-            ,  (socklen_t)         this->pvcstCfg->tSizeAddress
+                                   this->stChannel.s32Socket
+            ,  (struct sockaddr*) &this->stCfg.stAddress
+            ,  (socklen_t)         this->stCfg.tSizeAddress
          )
    ){
-      std::cerr << "connect" << std::endl;
+      std::cerr << std::endl << "ERROR: connect" << std::endl;
       exit(EXIT_FAILURE);
    }
 }
 
 void Type_SwcServiceEthTp::vDeInitFunction(void){
-   close(this->stChannel.u32Socket);
+   close(this->stChannel.s32Socket);
 }
 
 void Type_SwcServiceEthTp::vRead(
@@ -106,7 +123,7 @@ void Type_SwcServiceEthTp::vRead(
    ,  uint32 u32LengthBuffer
 ){
    read(
-         this->stChannel.u32Socket
+         this->stChannel.s32Socket
       ,  ps8Buffer
       ,  u32LengthBuffer
    );
@@ -117,10 +134,10 @@ void Type_SwcServiceEthTp::vWrite(
    ,        uint32 u32LengthBuffer
 ){
    send(
-         this->stChannel.u32Socket
+         this->stChannel.s32Socket
       ,  pcs8Buffer
       ,  u32LengthBuffer
-      ,  this->pvcstCfg->u32FlagsSend
+      ,  this->stCfg.u32FlagsSend
    );
 }
 
