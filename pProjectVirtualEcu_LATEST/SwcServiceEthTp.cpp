@@ -166,21 +166,44 @@ void Type_SwcServiceEthTp::vDeInitFunction(void){
    close(this->stChannel.s32FileDescriptorSocket);
 }
 
+uint8 Ascii2u8(const uint8 cu8Ascii){
+   return(
+      (('0' <= cu8Ascii) && ('9' >= cu8Ascii))
+      ?  cu8Ascii - 0x30
+      :  0x00
+   );
+}
+
+uint8 Bcd2u8(const uint8* pu8String){
+   return Ascii2u8(pu8String[0])*0x10 + Ascii2u8(pu8String[1]);
+}
+
 void Type_SwcServiceEthTp::vRead(
-      uint8* pu8Buffer
+      uint8* pu8BufferHex
    ,  uint32 u32LengthBuffer
 ){
+   uint8 lau8BufferBcd[1024];
    read(
          this->stChannel.s32Socket
-      ,  pu8Buffer
-      ,  u32LengthBuffer
+      ,  &lau8BufferBcd[0]
+      ,  1024
    );
+   std::cout << "client\t: " << lau8BufferBcd << std::endl;
+
+   for(
+      uint8 lu8IndexBufferHex =  0;
+            lu8IndexBufferHex <= pu8BufferHex[0];
+            lu8IndexBufferHex ++
+   ){
+      pu8BufferHex[lu8IndexBufferHex] = Bcd2u8(&lau8BufferBcd[2*lu8IndexBufferHex]);
+   }
 }
 
 void Type_SwcServiceEthTp::vWrite(
       const uint8* pcu8Buffer
    ,        uint32 u32LengthBuffer
 ){
+   std::cout << "server\t: " << pcu8Buffer << std::endl << std::endl;
    send(
          this->stChannel.s32Socket
       ,  pcu8Buffer
