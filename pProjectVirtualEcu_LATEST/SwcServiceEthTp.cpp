@@ -67,8 +67,8 @@ class Type_SwcServiceEthTp:
 
    public:
       void vInitFunction   (void);
-      void vRead           (      sint8* ps8Buffer,  uint32 u32LengthBuffer);
-      void vWrite          (const sint8* pcs8Buffer, uint32 u32LengthBuffer);
+      void vRead           (      uint8* pu8Buffer,  uint32 u32LengthBuffer);
+      void vWrite          (const uint8* pcu8Buffer, uint32 u32LengthBuffer);
       void vMainFunction   (void);
       void vDeInitFunction (void);
 };
@@ -167,23 +167,23 @@ void Type_SwcServiceEthTp::vDeInitFunction(void){
 }
 
 void Type_SwcServiceEthTp::vRead(
-      sint8* ps8Buffer
+      uint8* pu8Buffer
    ,  uint32 u32LengthBuffer
 ){
    read(
          this->stChannel.s32Socket
-      ,  ps8Buffer
+      ,  pu8Buffer
       ,  u32LengthBuffer
    );
 }
 
 void Type_SwcServiceEthTp::vWrite(
-      const sint8* pcs8Buffer
+      const uint8* pcu8Buffer
    ,        uint32 u32LengthBuffer
 ){
    send(
          this->stChannel.s32Socket
-      ,  pcs8Buffer
+      ,  pcu8Buffer
       ,  u32LengthBuffer
       ,  this->stCfg.u32FlagsSend
    );

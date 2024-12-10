@@ -23,8 +23,8 @@
 class infClientSwcServiceEthTp{
    public:
       virtual void vInitFunction   (void)                                            = 0;
-      virtual void vRead           (      sint8* ps8Buffer,  uint32 u32LengthBuffer) = 0;
-      virtual void vWrite          (const sint8* pcs8Buffer, uint32 u32LengthBuffer) = 0;
+      virtual void vRead           (      uint8* pu8Buffer,  uint32 u32LengthBuffer) = 0;
+      virtual void vWrite          (const uint8* pcu8Buffer, uint32 u32LengthBuffer) = 0;
       virtual void vMainFunction   (void)                                            = 0;
       virtual void vDeInitFunction (void)                                            = 0;
 };
