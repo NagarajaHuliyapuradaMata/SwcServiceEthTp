@@ -166,48 +166,96 @@ void Type_SwcServiceEthTp::vDeInitFunction(void){
    close(this->stChannel.s32FileDescriptorSocket);
 }
 
-uint8 Ascii2u8(const uint8 cu8Ascii){
+uint8 u8Ascii2Hex(const uint8 lcu8Ascii){
    return(
-      (('0' <= cu8Ascii) && ('9' >= cu8Ascii))
-      ?  cu8Ascii - 0x30
-      :  0x00
+      (('0' <= lcu8Ascii) && ('9' >= lcu8Ascii))
+      ?  lcu8Ascii - '0'
+      :  (
+            (('A' <= lcu8Ascii) && ('F' >= lcu8Ascii))
+            ?  lcu8Ascii - 0x37
+            :  (
+                  (('a' <= lcu8Ascii) && ('f' >= lcu8Ascii))
+                  ?  lcu8Ascii - 0x57
+                  :  0
+               )
+         )
    );
 }
 
-uint8 Bcd2u8(const uint8* pu8String){
-   return Ascii2u8(pu8String[0])*0x10 + Ascii2u8(pu8String[1]);
+uint8 u8Hex2Ascii(const uint8 lcu8Hex){
+   return(
+      ((0 <= lcu8Hex) && (9 >= lcu8Hex))
+      ?  lcu8Hex + '0'
+      :  (
+            ((0x0A <= lcu8Hex) && (0x0F >= lcu8Hex))
+            ?  lcu8Hex - 0x0A + 'A'
+            :  0
+         )
+   );
+}
+
+void vBcd2Hex(
+            uint8* lpu8Hex
+   ,  const uint8* lpcu8Bcd
+){
+   *lpu8Hex = u8Ascii2Hex(lpcu8Bcd[0])*0x10 + u8Ascii2Hex(lpcu8Bcd[1]);
+}
+
+void vHex2Bcd(
+            uint8* lpu8Bcd
+   ,  const uint8* lpcu8Hex
+){
+   lpu8Bcd[0] = u8Hex2Ascii((*lpcu8Hex & 0xF0)>>4);
+   lpu8Bcd[1] = u8Hex2Ascii( *lpcu8Hex & 0x0F);
 }
 
 void Type_SwcServiceEthTp::vRead(
-      uint8* pu8BufferHex
-   ,  uint32 u32LengthBuffer
+      uint8* lpu8BufferHex
+   ,  uint32 lu32LengthBufferHex
 ){
-   uint8 lau8BufferBcd[1024];
+   uint8 lau8BufferBcd[2048];
    read(
          this->stChannel.s32Socket
       ,  &lau8BufferBcd[0]
-      ,  1024
+      ,  2048
    );
    std::cout << "client\t: " << lau8BufferBcd << std::endl;
 
    for(
       uint8 lu8IndexBufferHex =  0;
-            lu8IndexBufferHex <= pu8BufferHex[0];
+            lu8IndexBufferHex <= lpu8BufferHex[0];
             lu8IndexBufferHex ++
    ){
-      pu8BufferHex[lu8IndexBufferHex] = Bcd2u8(&lau8BufferBcd[2*lu8IndexBufferHex]);
+      vBcd2Hex(
+            &lpu8BufferHex[  lu8IndexBufferHex]
+         ,  &lau8BufferBcd[2*lu8IndexBufferHex]
+      );
    }
 }
 
+uint8 gau8BufferBcd[2048];
 void Type_SwcServiceEthTp::vWrite(
-      const uint8* pcu8Buffer
-   ,        uint32 u32LengthBuffer
+      const uint8* lpcu8BufferHex
+   ,        uint32 lu32LengthBufferHex
 ){
-   std::cout << "server\t: " << pcu8Buffer << std::endl << std::endl;
+   uint8 lu8IndexBufferHex;
+   for(
+      lu8IndexBufferHex =  0;
+      lu8IndexBufferHex <= lpcu8BufferHex[0];
+      lu8IndexBufferHex ++
+   ){
+      vHex2Bcd(
+            &gau8BufferBcd [2*lu8IndexBufferHex]
+         ,  &lpcu8BufferHex[  lu8IndexBufferHex]
+      );
+   }
+   gau8BufferBcd[2*lu8IndexBufferHex] = '\0';
+
+   std::cout << "server\t: " << gau8BufferBcd << std::endl << std::endl;
    send(
          this->stChannel.s32Socket
-      ,  pcu8Buffer
-      ,  u32LengthBuffer
+      ,  &gau8BufferBcd[0]
+      ,  2048
       ,  this->stCfg.u32FlagsSend
    );
 }
